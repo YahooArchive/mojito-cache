@@ -1,4 +1,4 @@
-/*jslint nomen:true, indent: 4, plusplus: true, forin: true, regexp:true */
+/*jslint nomen: true, indent: 4*/
 
 /*
  * Copyright (c) 2013 Yahoo! Inc. All rights reserved.
