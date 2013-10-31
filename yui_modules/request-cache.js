@@ -36,7 +36,7 @@ YUI.add('request-cache', function (Y, NAME) {
                 cachedResource = (freshInstance.base && cache.mojits.byBase[freshInstance.base]) ||
                     (freshInstance.type && cache.mojits.byType[freshInstance.type]);
 
-                // If the is a cached resource, dispatch with that.
+                // If there is a cached resource, dispatch with that.
                 if (cachedResource) {
 
                     // Merge the cached command and the fresh command
