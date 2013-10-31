@@ -49,13 +49,13 @@ YUI.add('request-cache', function (Y, NAME) {
                     //
                     // We need to mix-in the expanded instance from the cache without overwriting
                     // the properties from the fresh command.instance.
-                    //  Here again we can't use merge because of circular references.
+                    // Here again we can't use merge because of circular references.
                     Y.mix(newCommand.instance, cachedResource.actionContext.command.instance);
 
                     // So we didn't overwite the instance.config, but the cached instance bears
-                    //  some config that we want to retain, but we don't overwite to give
-                    //  priority to the fresh config.
-                    //  We're assuming there isn't any circular references here, so we merge.
+                    // some config that we want to retain, but we don't overwite to give
+                    // priority to the fresh config.
+                    // We're assuming there isn't any circular references here, so we merge.
                     Y.mix(newCommand.instance.config, cachedResource.actionContext.command.instance.config, false, null, 0, true);
 
                     // The cached AC gets the new command.
@@ -92,7 +92,7 @@ YUI.add('request-cache', function (Y, NAME) {
                 } else {
 
                     // Expands the command.instance and creates a new AC
-                    //  which in turn instanciates all the addons and calls the controller
+                    // which in turn instanciates all the addons and calls the controller
                     originalDispatcher.dispatch.apply(this, arguments);
                 }
             };
