@@ -21,6 +21,11 @@
     "npm": "> 1.2",
     "mojito": ">= 0.7.4"
   },
+  "yahoo": {
+    "mojito": {
+      "type": "bundle"
+    }
+  },
   "devDependencies": {
     "mojito": "0.7.x",
     "mojito-cli": "~0.0.5",

@@ -1,8 +1,14 @@
+/*
+ * Copyright (c) 2011-2013, Yahoo! Inc.  All rights reserved.
+ * Copyrights licensed under the New BSD License.
+ * See the accompanying LICENSE file for terms.
+ */
 /*jslint nomen: true, indent: 4*/
 
 /*
  * Copyright (c) 2013 Yahoo! Inc. All rights reserved.
  */
+
 YUI.add('request-cache', function (Y, NAME) {
     'use strict';
 
@@ -12,7 +18,9 @@ YUI.add('request-cache', function (Y, NAME) {
 
             this.dispatch = function (command, adapter) {
 
-                var cache,
+                var refreshedAddons,
+                    staticAppConfig,
+                    cache,
                     cachedResource,
                     newCommand,
                     freshInstance = command.instance;
@@ -39,6 +47,8 @@ YUI.add('request-cache', function (Y, NAME) {
                 // If there is a cached resource, dispatch with that.
                 if (cachedResource) {
 
+                    staticAppConfig = this.store.getStaticAppConfig();
+
                     // Merge the cached command and the fresh command
                     newCommand = Y.merge(cachedResource.actionContext.command, command);
 
@@ -59,10 +69,12 @@ YUI.add('request-cache', function (Y, NAME) {
                     Y.mix(newCommand.instance.config, cachedResource.actionContext.command.instance.config, false, null, 0, true);
 
                     // The cached AC gets the new command.
+                    // TODO: verify we never need to clone this to avoid conflicts with resuming
+                    // executions (e.g. in mojito-pipeline)
                     cachedResource.actionContext.command = newCommand;
 
                     // Instantiate again the addons that need to be refreshed
-                    Y.Array.each(['config', 'params'], function (addonName) {
+                    Y.Array.each(staticAppConfig['request-cache'].refreshAddons, function (addonName) {
                         var addonInstance,
                             AddonConstuct = Y.mojito.addons.ac[addonName];
 
