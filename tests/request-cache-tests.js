@@ -23,21 +23,16 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                         }
                     }
                 },
-                ac;
-
-            ac = new Y.mojito.ActionContext({
-                controller: {
-                    index: function () {}
-                },
-                command: {
-                    instance: {
-                        base: 'foo'
+                ac = new Y.mojito.ActionContext({
+                    command: {
+                        instance: {
+                            base: 'foo'
+                        }
+                    },
+                    adapter: {
+                        req: req
                     }
-                },
-                adapter: {
-                    req: req
-                }
-            });
+                });
 
             A.isTrue(!!req.globals['request-cache'].byBase.foo);
         }
