@@ -8,18 +8,44 @@ YUI.add('request-cache-tests', function (Y, NAME) {
         Value = YUITest.Mock.Value,
         suite = new YUITest.TestSuite(NAME);
 
-    // Y.use('mojito-pipeline-addon');
+    Y.mojito.ActionContext = function () {};
+    Y.use('request-cache');
 
     suite.add(new YUITest.TestCase({
-
         name: 'unit tests',
 
-        'Test user rules (JS)': function () {
-            A.pass();
+        'Instanciating AC populates the cache in the request': function () {
+            var req = {
+                    globals: {
+                        "request-cache": {
+                            byBase: {},
+                            byType: {}
+                        }
+                    }
+                },
+                ac;
+
+            ac = new Y.mojito.ActionContext({
+                controller: {
+                    index: function () {}
+                },
+                command: {
+                    instance: {
+                        base: 'foo'
+                    }
+                },
+                adapter: {
+                    req: req
+                }
+            });
+
+            A.isTrue(!!req.globals['request-cache'].byBase.foo);
         }
     }));
 
     YUITest.TestRunner.add(suite);
 }, '0.0.1', {
-    requires: [ 'request-cache' ]
+    requires: [
+        'mojito-action-context'
+    ]
 });
