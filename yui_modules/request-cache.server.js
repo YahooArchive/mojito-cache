@@ -31,18 +31,15 @@ YUI.add('request-cache', function (Y, NAME) {
                 if (!adapter.req.globals['request-cache']) {
 
                     adapter.req.globals['request-cache'] = {
-                        addons: {},
-                        mojits: {
-                            byBase: {},
-                            byType: {}
-                        }
+                        byBase: {},
+                        byType: {}
                     };
                 }
 
                 // Retrieve the cache and try to get a corresponding cached resource.
                 cache = adapter.req.globals['request-cache'];
-                cachedResource = (freshInstance.base && cache.mojits.byBase[freshInstance.base]) ||
-                    (freshInstance.type && cache.mojits.byType[freshInstance.type]);
+                cachedResource = (freshInstance.base && cache.byBase[freshInstance.base]) ||
+                    (freshInstance.type && cache.byType[freshInstance.type]);
 
                 // If there is a cached resource, dispatch with that.
                 if (cachedResource) {
@@ -133,9 +130,9 @@ YUI.add('request-cache', function (Y, NAME) {
 
             // Save the references in either byBase or byType
             if (instance.base) {
-                cache.mojits.byBase[instance.base] = newExpandedResource;
+                cache.byBase[instance.base] = newExpandedResource;
             } else if (instance.type) {
-                cache.mojits.byType[instance.type] = newExpandedResource;
+                cache.byType[instance.type] = newExpandedResource;
             }
 
             // Execute the original constructor: addons + controller call
