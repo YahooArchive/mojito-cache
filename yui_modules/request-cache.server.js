@@ -70,8 +70,11 @@ YUI.add('request-cache', function (Y, NAME) {
                     // executions (e.g. in mojito-pipeline)
                     cachedResource.actionContext.command = newCommand;
 
+
                     // Instantiate again the addons that need to be refreshed
-                    Y.Array.each(staticAppConfig['request-cache'].refreshAddons, function (addonName) {
+                    refreshedAddons = staticAppConfig['request-cache'] && staticAppConfig['request-cache'].refreshAddons;
+                    Y.Array.each(refreshedAddons, function (addonName) {
+
                         var addonInstance,
                             AddonConstuct = Y.mojito.addons.ac[addonName];
 
