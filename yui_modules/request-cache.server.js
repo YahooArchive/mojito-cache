@@ -84,10 +84,6 @@ YUI.add('request-cache', function (Y, NAME) {
                             if (addonInstance.namespace && cachedResource.actionContext[addonInstance.namespace]) {
 
                                 cachedResource.actionContext[addonInstance.namespace] = addonInstance;
-
-                                if (Y.Lang.isFunction(addonInstance.setStore)) {
-                                    addonInstance.setStore(cachedResource.store);
-                                }
                             }
                         }
                     });
@@ -113,7 +109,6 @@ YUI.add('request-cache', function (Y, NAME) {
         ExpandedResource = function (options) {
             this.actionContext = options.actionContext;
             this.controller    = options.controller;
-            this.store         = options.store;
         },
         /**
          * A superclass for mojito's ActionContext
