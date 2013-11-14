@@ -13,7 +13,6 @@ following properties:
 	"request-cache": {
 		"refreshAddons": ["myAddon"]
 	}
-}
 ```
 
 You can specify the list of addons that need to be refreshed across mojit
