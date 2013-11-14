@@ -4,10 +4,7 @@
  * See the accompanying LICENSE file for terms.
  */
 /*jslint nomen: true, indent: 4*/
-
-/*
- * Copyright (c) 2013 Yahoo! Inc. All rights reserved.
- */
+/*global YUI, YUITest */
 
 YUI.add('request-cache', function (Y, NAME) {
     'use strict';
