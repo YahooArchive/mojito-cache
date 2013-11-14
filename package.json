@@ -4,7 +4,9 @@
   "description": "A set of libraries for various caching strategies in mojito.",
   "main": " ",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "pretest": "mojito jslint app",
+    "test": "istanbul cover --yui=true --dir=artifacts/test/coverage ./node_modules/.bin/mojito -- test app .",
+    "posttest": "istanbul check-coverage --statements 80 --lines 80 --functions 80"
   },
   "repository": {
     "type": "git",
