@@ -67,7 +67,6 @@ YUI.add('request-cache', function (Y, NAME) {
                     // executions (e.g. in mojito-pipeline)
                     cachedResource.actionContext.command = newCommand;
 
-
                     // Instantiate again the addons that need to be refreshed
                     refreshedAddons = staticAppConfig['request-cache'] && staticAppConfig['request-cache'].refreshAddons;
                     Y.Array.each(refreshedAddons, function (addonName) {
@@ -76,6 +75,7 @@ YUI.add('request-cache', function (Y, NAME) {
                             AddonConstuct = Y.mojito.addons.ac[addonName];
 
                         if (AddonConstuct) {
+
                             addonInstance = new AddonConstuct(newCommand, adapter, cachedResource.actionContext);
 
                             if (addonInstance.namespace && cachedResource.actionContext[addonInstance.namespace]) {
@@ -92,6 +92,7 @@ YUI.add('request-cache', function (Y, NAME) {
                     // TODO: handle __call
                     // TODO: handle staticAppConfig.actionTimeout
                     if (Y.Lang.isFunction(cachedResource.controller[newCommand.action])) {
+
                         cachedResource.controller[newCommand.action](cachedResource.actionContext);
                     }
                 } else {
@@ -107,6 +108,7 @@ YUI.add('request-cache', function (Y, NAME) {
             this.actionContext = options.actionContext;
             this.controller    = options.controller;
         },
+
         /**
          * A superclass for mojito's ActionContext
          * @param {Object} options.controller
@@ -125,8 +127,10 @@ YUI.add('request-cache', function (Y, NAME) {
 
             // Save the references in either byBase or byType
             if (instance.base) {
+
                 cache.byBase[instance.base] = newExpandedResource;
             } else if (instance.type) {
+
                 cache.byType[instance.type] = newExpandedResource;
             }
 
