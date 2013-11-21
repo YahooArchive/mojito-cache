@@ -22,7 +22,11 @@ YUI.add('request-cache-tests', function (Y, NAME) {
         setUp: function () {
             var self = this;
 
-            this.CONFIG = {};
+            this.CONFIG = {
+                'request-cache': {
+                    refreshAddons: [ 'baz' ]
+                }
+            };
             this.baseCacheUsed = false;
             this.typeCacheUsed = false;
             this.cachedAc = {
@@ -151,6 +155,7 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                     }
                 }
             });
+
             // If we have only base, use base
             A.isTrue(this.baseCacheUsed);
             A.isFalse(this.typeCacheUsed);
@@ -195,13 +200,6 @@ YUI.add('request-cache-tests', function (Y, NAME) {
         },
 
         'Correct Addons are refreshed': function () {
-
-            // Configure refreshing two addons
-            this.CONFIG = {
-                'request-cache': {
-                    refreshAddons: [ 'baz' ]
-                }
-            };
 
             Y.mojito.Dispatcher.dispatch({
                 instance: {

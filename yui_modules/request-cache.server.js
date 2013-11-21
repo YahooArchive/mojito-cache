@@ -48,12 +48,17 @@ YUI.add('request-cache', function (Y, NAME) {
                     if (!refreshedAddons) {
                         staticAppConfig = this.store.getStaticAppConfig();
                         refreshedAddons = staticAppConfig['request-cache'] && staticAppConfig['request-cache'].refreshAddons;
+                        if (!refreshedAddons) {
+                            refreshedAddons = [];
+                        }
                     }
 
                     newCommand = cachedResource.actionContext.command;
 
-                    // Update the params
+                    // We want the new params and action
                     newCommand.params = command.params;
+                    newCommand.action = command.action;
+
 
                     // This is specific to mojito-pipeline
                     newCommand.task = command.task;
