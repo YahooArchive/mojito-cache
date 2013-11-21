@@ -13,12 +13,12 @@ YUI.add('request-cache', function (Y, NAME) {
         OriginalActionContext  = Y.mojito.ActionContext,
         RequestCacheDispatcher = function () {
 
-            var staticAppConfig;
+            var staticAppConfig,
+                refreshedAddons;
 
             this.dispatch = function (command, adapter) {
 
-                var refreshedAddons,
-                    cache,
+                var cache,
                     cachedResource,
                     newCommand,
                     i,
@@ -31,7 +31,6 @@ YUI.add('request-cache', function (Y, NAME) {
                 adapter.req.globals = adapter.req.globals || {};
 
                 if (!adapter.req.globals['request-cache']) {
-
                     adapter.req.globals['request-cache'] = {
                         byBase: {},
                         byType: {}
@@ -46,35 +45,33 @@ YUI.add('request-cache', function (Y, NAME) {
                 // If there is a cached resource, dispatch with that.
                 if (cachedResource) {
 
-                    if (!staticAppConfig) {
+                    if (!refreshedAddons) {
                         staticAppConfig = this.store.getStaticAppConfig();
+                        refreshedAddons = staticAppConfig['request-cache'] && staticAppConfig['request-cache'].refreshAddons;
                     }
 
                     newCommand = cachedResource.actionContext.command;
 
                     // Update the params
                     newCommand.params = command.params;
+
                     // This is specific to mojito-pipeline
                     newCommand.task = command.task;
+
                     Y.mix(newCommand.instance.config, command.instance.config, true);
 
                     // Instantiate again the addons that need to be refreshed
-                    refreshedAddons = staticAppConfig['request-cache'] && staticAppConfig['request-cache'].refreshAddons;
                     for (i = 0; i < refreshedAddons.length; i++) {
-
                         AddonConstuct = Y.mojito.addons.ac[refreshedAddons[i]];
 
                         if (AddonConstuct) {
-
                             addonInstance = new AddonConstuct(newCommand, adapter, cachedResource.actionContext);
 
                             if (addonInstance.namespace && cachedResource.actionContext[addonInstance.namespace]) {
-
                                 cachedResource.actionContext[addonInstance.namespace] = addonInstance;
                             }
                         }
                     }
-
 
                     // The adapter and its callbacks need to be refreshed
                     cachedResource.actionContext._adapter = adapter;
@@ -83,11 +80,9 @@ YUI.add('request-cache', function (Y, NAME) {
                     // TODO: handle __call
                     // TODO: handle staticAppConfig.actionTimeout
                     if (Y.Lang.isFunction(cachedResource.controller[newCommand.action])) {
-
                         cachedResource.controller[newCommand.action](cachedResource.actionContext);
                     }
                 } else {
-
                     // Expands the command.instance and creates a new AC
                     // which in turn instanciates all the addons and calls the controller
                     originalDispatcher.dispatch.apply(this, arguments);
@@ -118,10 +113,8 @@ YUI.add('request-cache', function (Y, NAME) {
 
             // Save the references in either byBase or byType
             if (instance.base) {
-
                 cache.byBase[instance.base] = newExpandedResource;
             } else if (instance.type) {
-
                 cache.byType[instance.type] = newExpandedResource;
             }
 
