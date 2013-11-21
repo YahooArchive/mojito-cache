@@ -145,9 +145,9 @@ YUI.add('request-cache-tests', function (Y, NAME) {
             Y.mojito.Dispatcher.dispatch({
                 instance: {
                     base: 'foo',
-                    type: 'Bar'
-                },
-                action: 'index'
+                    type: 'Bar',
+                    action: 'index'
+                }
             }, {
                 req: {
                     globals: {
@@ -165,9 +165,9 @@ YUI.add('request-cache-tests', function (Y, NAME) {
 
             Y.mojito.Dispatcher.dispatch({
                 instance: {
-                    base: 'foo'
-                },
-                action: 'index'
+                    base: 'foo',
+                    action: 'index'
+                }
             }, {
                 req: {
                     globals: {
@@ -184,9 +184,9 @@ YUI.add('request-cache-tests', function (Y, NAME) {
 
             Y.mojito.Dispatcher.dispatch({
                 instance: {
-                    type: 'Bar'
-                },
-                action: 'index'
+                    type: 'Bar',
+                    action: 'index'
+                }
             }, {
                 req: {
                     globals: {
@@ -203,9 +203,9 @@ YUI.add('request-cache-tests', function (Y, NAME) {
 
             Y.mojito.Dispatcher.dispatch({
                 instance: {
-                    type: 'Bar'
-                },
-                action: 'index'
+                    type: 'Bar',
+                    action: 'index'
+                }
             }, {
                 req: {
                     globals: {

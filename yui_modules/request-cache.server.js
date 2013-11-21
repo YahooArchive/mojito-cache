@@ -55,9 +55,10 @@ YUI.add('request-cache', function (Y, NAME) {
 
                     newCommand = cachedResource.actionContext.command;
 
+                    // debugger;
                     // We want the new params and action
                     newCommand.params = command.params;
-                    newCommand.action = command.action;
+                    newCommand.action = command.instance.action || newCommand.action;
 
 
                     // This is specific to mojito-pipeline
