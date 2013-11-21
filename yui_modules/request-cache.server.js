@@ -13,10 +13,11 @@ YUI.add('request-cache', function (Y, NAME) {
         OriginalActionContext  = Y.mojito.ActionContext,
         RequestCacheDispatcher = function () {
 
+            var staticAppConfig;
+
             this.dispatch = function (command, adapter) {
 
                 var refreshedAddons,
-                    staticAppConfig,
                     cache,
                     cachedResource,
                     newCommand,
@@ -41,35 +42,19 @@ YUI.add('request-cache', function (Y, NAME) {
                 // If there is a cached resource, dispatch with that.
                 if (cachedResource) {
 
-                    staticAppConfig = this.store.getStaticAppConfig();
+                    staticAppConfig = staticAppConfig || this.store.getStaticAppConfig();
 
-                    // Merge the cached command and the fresh command
-                    newCommand = Y.merge(cachedResource.actionContext.command, command);
+                    newCommand = cachedResource.actionContext.command;
 
-                    // That was brutal - the cached command had properties that we wanted
-                    // but they got overwritten by smaller objects from the fresh, unexpanded command.
-                    // But we can' use Y.mix with the more delicate (recursive) merging because
-                    // the command may contain circular references. So now we need to cherry-pick.
-                    //
-                    // We need to mix-in the expanded instance from the cache without overwriting
-                    // the properties from the fresh command.instance.
-                    // Here again we can't use merge because of circular references.
-                    Y.mix(newCommand.instance, cachedResource.actionContext.command.instance);
-
-                    // So we didn't overwite the instance.config, but the cached instance bears
-                    // some config that we want to retain, but we don't overwite to give
-                    // priority to the fresh config.
-                    // We're assuming there isn't any circular references here, so we merge.
-                    Y.mix(newCommand.instance.config, cachedResource.actionContext.command.instance.config, false, null, 0, true);
-
-                    // The cached AC gets the new command.
-                    // TODO: verify we never need to clone this to avoid conflicts with resuming
-                    // executions (e.g. in mojito-pipeline)
-                    cachedResource.actionContext.command = newCommand;
+                    // Update the params
+                    newCommand.params = command.params;
+                    // This is specific to mojito-pipeline
+                    newCommand.task = command.task;
+                    Y.mix(newCommand.instance.config, command.instance.config, true);
 
                     // Instantiate again the addons that need to be refreshed
                     refreshedAddons = staticAppConfig['request-cache'] && staticAppConfig['request-cache'].refreshAddons;
-                    Y.Array.each(refreshedAddons, function (addonName) {
+                    refreshedAddons.forEach(function (addonName) {
 
                         var addonInstance,
                             AddonConstuct = Y.mojito.addons.ac[addonName];
