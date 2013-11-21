@@ -3,7 +3,7 @@
  * Copyrights licensed under the New BSD License.
  * See the accompanying LICENSE file for terms.
  */
-/*jslint nomen: true, indent: 4*/
+/*jslint nomen: true, indent: 4, plusplus: true*/
 /*global YUI, YUITest */
 
 YUI.add('request-cache', function (Y, NAME) {
@@ -21,6 +21,10 @@ YUI.add('request-cache', function (Y, NAME) {
                     cache,
                     cachedResource,
                     newCommand,
+                    i,
+                    addonName,
+                    addonInstance,
+                    AddonConstuct,
                     freshInstance = command.instance;
 
                 // Build cache if it doesn't exist.
@@ -42,7 +46,9 @@ YUI.add('request-cache', function (Y, NAME) {
                 // If there is a cached resource, dispatch with that.
                 if (cachedResource) {
 
-                    staticAppConfig = staticAppConfig || this.store.getStaticAppConfig();
+                    if (!staticAppConfig) {
+                        staticAppConfig = this.store.getStaticAppConfig();
+                    }
 
                     newCommand = cachedResource.actionContext.command;
 
@@ -54,10 +60,9 @@ YUI.add('request-cache', function (Y, NAME) {
 
                     // Instantiate again the addons that need to be refreshed
                     refreshedAddons = staticAppConfig['request-cache'] && staticAppConfig['request-cache'].refreshAddons;
-                    refreshedAddons.forEach(function (addonName) {
+                    for (i = 0; i < refreshedAddons.length; i++) {
 
-                        var addonInstance,
-                            AddonConstuct = Y.mojito.addons.ac[addonName];
+                        AddonConstuct = Y.mojito.addons.ac[refreshedAddons[i]];
 
                         if (AddonConstuct) {
 
@@ -68,7 +73,8 @@ YUI.add('request-cache', function (Y, NAME) {
                                 cachedResource.actionContext[addonInstance.namespace] = addonInstance;
                             }
                         }
-                    });
+                    }
+
 
                     // The adapter and its callbacks need to be refreshed
                     cachedResource.actionContext._adapter = adapter;
