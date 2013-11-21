@@ -1,6 +1,6 @@
 {
   "name": "mojito-cache",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A set of libraries for various caching strategies in mojito.",
   "main": " ",
   "scripts": {
