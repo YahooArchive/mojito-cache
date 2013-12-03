@@ -29,6 +29,7 @@ YUI.add('request-cache-tests', function (Y, NAME) {
             };
             this.baseCacheUsed = false;
             this.typeCacheUsed = false;
+            this.__callIsUsed = false;
             this.cachedAc = {
                 command: {
                     instance: {
@@ -49,6 +50,9 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                         controller: {
                             index: function () {
                                 self.baseCacheUsed = true;
+                            },
+                            __call: function () {
+                                self.__callIsUsed = true;
                             }
                         }
                     }
@@ -65,11 +69,6 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                 }
             };
 
-            Y.mojito.Dispatcher.store = {
-                getStaticAppConfig: function () {
-                    return self.CONFIG;
-                }
-            };
             Y.mojito.addons.ac = {
                 baz: BazAddon,
                 quux: QuuxAddon
@@ -140,7 +139,6 @@ YUI.add('request-cache-tests', function (Y, NAME) {
         },
 
         'Both Base and type: Base overrides Type': function () {
-            var self = this;
 
             Y.mojito.Dispatcher.dispatch({
                 instance: {
@@ -153,6 +151,9 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                     globals: {
                         'request-cache': this.cache
                     }
+                },
+                page: {
+                    staticAppConfig: this.CONFIG
                 }
             });
 
@@ -173,6 +174,9 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                     globals: {
                         'request-cache': this.cache
                     }
+                },
+                page: {
+                    staticAppConfig: this.CONFIG
                 }
             });
             // If we have only base, use base
@@ -192,11 +196,59 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                     globals: {
                         'request-cache': this.cache
                     }
+                },
+                page: {
+                    staticAppConfig: this.CONFIG
                 }
             });
             // If we have only base, use base
             A.isFalse(this.baseCacheUsed);
             A.isTrue(this.typeCacheUsed);
+        },
+
+        'Unknown action, __call is called': function () {
+
+            Y.mojito.Dispatcher.dispatch({
+                instance: {
+                    base: 'foo',
+                    action: 'unkownAction'
+                }
+            }, {
+                req: {
+                    globals: {
+                        'request-cache': this.cache
+                    }
+                },
+                page: {
+                    staticAppConfig: this.CONFIG
+                }
+            });
+            A.isTrue(this.__callIsUsed);
+        },
+
+        'Unknown action, and no __call, error is thrown': function () {
+
+            try {
+                Y.mojito.Dispatcher.dispatch({
+                    instance: {
+                        type: 'Bar',
+                        action: 'unkownAction'
+                    }
+                }, {
+                    req: {
+                        globals: {
+                            'request-cache': this.cache
+                        }
+                    },
+                    page: {
+                        staticAppConfig: this.CONFIG
+                    }
+                });
+            } catch (e) {
+                A.pass();
+                return;
+            }
+            A.fail('An error should have been thrown earlier');
         },
 
         'Correct Addons are refreshed': function () {
@@ -211,6 +263,9 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                     globals: {
                         'request-cache': this.cache
                     }
+                },
+                page: {
+                    staticAppConfig: this.CONFIG
                 }
             });
             // Verify that only baz has been refreshed in the cache
