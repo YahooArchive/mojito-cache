@@ -7,10 +7,12 @@ YUI.add('request-cache-tests', function (Y, NAME) {
     var A = YUITest.Assert,
         Value = YUITest.Mock.Value,
         suite = new YUITest.TestSuite(NAME),
+
         BazAddon = function () {
             this.cached = false;
             this.namespace = 'baz';
         },
+
         QuuxAddon = function () {
             this.cached = false;
             this.namespace = 'quux';
@@ -27,9 +29,11 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                     refreshAddons: [ 'baz' ]
                 }
             };
+
             this.baseCacheUsed = false;
             this.typeCacheUsed = false;
             this.__callIsUsed = false;
+
             this.cachedAc = {
                 command: {
                     instance: {
@@ -39,6 +43,7 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                 baz: new BazAddon({ cached: true }),
                 quux: new QuuxAddon({ cached: true })
             };
+
             // mark those two cached to notice when they're reallocated
             this.cachedAc.baz.cached = true;
             this.cachedAc.quux.cached = true;
@@ -93,7 +98,10 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                         }
                     },
                     adapter: {
-                        req: req
+                        req: req,
+                        page: {
+                            staticAppConfig: this.CONFIG
+                        }
                     }
                 };
 
@@ -102,12 +110,15 @@ YUI.add('request-cache-tests', function (Y, NAME) {
             Y.use('request-cache');
 
             ac = new Y.mojito.ActionContext(acArgs);
+
             // having both base and type results in being cached by base
             A.isNotUndefined(req.globals['request-cache'].byBase.foo);
             A.isUndefined(req.globals['request-cache'].byType.bar);
 
             delete acArgs.command.instance.base;
+
             ac = new Y.mojito.ActionContext(acArgs);
+
             // having just type populates by type
             A.isNotUndefined(req.globals['request-cache'].byType.bar);
 
@@ -124,15 +135,20 @@ YUI.add('request-cache-tests', function (Y, NAME) {
 
             // Invalidate the attached module to be able to use it again.
             Y.Env._attached['request-cache'] = false;
+
             // This will override the "original" dispatcher
             Y.use('request-cache');
 
             Y.mojito.Dispatcher.dispatch({ instance: {} }, {
-                req: req
+                req: req,
+                page: {
+                    staticAppConfig: this.CONFIG
+                }
             });
 
             // The original method is called
             A.isTrue(originalDispatcherCalled);
+
             // And the cache is created
             A.isObject(req.globals['request-cache'].byBase);
             A.isObject(req.globals['request-cache'].byType);
@@ -179,6 +195,7 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                     staticAppConfig: this.CONFIG
                 }
             });
+
             // If we have only base, use base
             A.isTrue(this.baseCacheUsed);
             A.isFalse(this.typeCacheUsed);
@@ -201,6 +218,7 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                     staticAppConfig: this.CONFIG
                 }
             });
+
             // If we have only base, use base
             A.isFalse(this.baseCacheUsed);
             A.isTrue(this.typeCacheUsed);
@@ -223,6 +241,7 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                     staticAppConfig: this.CONFIG
                 }
             });
+
             A.isTrue(this.__callIsUsed);
         },
 
@@ -248,6 +267,7 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                 A.pass();
                 return;
             }
+
             A.fail('An error should have been thrown earlier');
         },
 
@@ -268,6 +288,7 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                     staticAppConfig: this.CONFIG
                 }
             });
+
             // Verify that only baz has been refreshed in the cache
             A.isFalse(this.cache.byType.Bar.actionContext.baz.cached);
             A.isTrue(this.cache.byType.Bar.actionContext.quux.cached);

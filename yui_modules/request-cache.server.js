@@ -14,7 +14,8 @@ YUI.add('request-cache', function (Y, NAME) {
         RequestCacheDispatcher = function () {
 
             var staticAppConfig,
-                refreshedAddons;
+                refreshedAddons,
+                enabled = true;
 
             /**
              * Here we will mimic what the ActionContext constructor does,
@@ -27,43 +28,54 @@ YUI.add('request-cache', function (Y, NAME) {
              */
             this.dispatch = function (command, adapter) {
 
-                var cache,
+                var config,
+                    cache,
                     cachedResource,
                     newCommand,
                     action,
                     error,
                     i,
-                    addonName,
                     addonInstance,
                     AddonConstuct,
                     freshInstance = command.instance;
 
-                // Build the cache if it doesn't exist.
-                adapter.req.globals = adapter.req.globals || {};
+                if (!staticAppConfig) {
 
-                if (!adapter.req.globals['request-cache']) {
-                    adapter.req.globals['request-cache'] = {
-                        byBase: {},
-                        byType: {}
-                    };
+                    // Retrieve the cache configuration on the first dispatch.
+
+                    staticAppConfig = adapter.page.staticAppConfig;
+                    config = staticAppConfig['request-cache'] || {};
+
+                    // The cache is enabled if you don't set the "enabled"
+                    // property in the cache configuration, or if you set
+                    // that property to a value that evaluates to "true".
+                    if (config.hasOwnProperty('enabled')) {
+                        enabled = !!config.enabled;
+                    }
+
+                    refreshedAddons = config.refreshAddons || [];
                 }
 
-                // Retrieve the cache and try to get a corresponding cached resource.
-                cache = adapter.req.globals['request-cache'];
-                cachedResource = (freshInstance.base && cache.byBase[freshInstance.base]) ||
-                    (freshInstance.type && cache.byType[freshInstance.type]);
+                if (enabled) {
+
+                    // Build the cache if it doesn't exist.
+                    adapter.req.globals = adapter.req.globals || {};
+
+                    if (!adapter.req.globals['request-cache']) {
+                        adapter.req.globals['request-cache'] = {
+                            byBase: {},
+                            byType: {}
+                        };
+                    }
+
+                    // Retrieve the cache and try to get a corresponding cached resource.
+                    cache = adapter.req.globals['request-cache'];
+                    cachedResource = (freshInstance.base && cache.byBase[freshInstance.base]) ||
+                        (freshInstance.type && cache.byType[freshInstance.type]);
+                }
 
                 // If there is a cached resource, dispatch with that.
                 if (cachedResource) {
-
-                    // If this is the first ever call to dispatch, we retrieve that list from the config
-                    if (!refreshedAddons) {
-                        staticAppConfig = adapter.page.staticAppConfig;
-                        refreshedAddons = staticAppConfig['request-cache'] && staticAppConfig['request-cache'].refreshAddons;
-                        if (!refreshedAddons) {
-                            refreshedAddons = [];
-                        }
-                    }
 
                     // We reference this here just to easily refer
                     // to cachedResource.actionContext.command
@@ -95,7 +107,6 @@ YUI.add('request-cache', function (Y, NAME) {
                     // The adapter and its callbacks need to be refreshed
                     cachedResource.actionContext._adapter = adapter;
 
-                    // TODO: handle staticAppConfig.actionTimeout
                     // Handle the __call case
                     if (Y.Lang.isFunction(cachedResource.controller[newCommand.action])) {
 
@@ -111,7 +122,7 @@ YUI.add('request-cache', function (Y, NAME) {
                     }
 
                     // Handle controller timeout
-                    if (adapter.page.staticAppConfig.actionTimeout) {
+                    if (staticAppConfig.actionTimeout) {
 
                         // This will be cleared in ActionContext.done if it happens in time
                         cachedResource.actionContext._timer = setTimeout(function () {
@@ -138,7 +149,7 @@ YUI.add('request-cache', function (Y, NAME) {
                             //     Y.log('ac.done() called after timeout. results lost', 'warn', NAME);
                             // };
 
-                        }, adapter.page.staticAppConfig.actionTimeout);
+                        }, staticAppConfig.actionTimeout);
                     }
 
                     cachedResource.controller[action](cachedResource.actionContext);
