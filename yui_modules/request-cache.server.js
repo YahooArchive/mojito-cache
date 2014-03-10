@@ -9,13 +9,14 @@
 YUI.add('request-cache', function (Y, NAME) {
     'use strict';
 
-    var originalDispatcher     = Y.mojito.Dispatcher,
-        OriginalActionContext  = Y.mojito.ActionContext,
-        RequestCacheDispatcher = function () {
+    var staticAppConfig,
+        refreshedAddons,
+        enabled = true,
 
-            var staticAppConfig,
-                refreshedAddons,
-                enabled = true;
+        originalDispatcher     = Y.mojito.Dispatcher,
+        OriginalActionContext  = Y.mojito.ActionContext,
+
+        RequestCacheDispatcher = function () {
 
             /**
              * Here we will mimic what the ActionContext constructor does,
@@ -180,18 +181,20 @@ YUI.add('request-cache', function (Y, NAME) {
          * @param {Object} options.dispatcher
          */
         RequestCacheActionContext = function (options) {
-            var newExpandedResource = new ExpandedResource({
-                    actionContext: this,
-                    controller: options.controller
-                }),
-                instance = options.command.instance,
-                cache = options.adapter.req.globals['request-cache'];
+            if (enabled) {
+                var newExpandedResource = new ExpandedResource({
+                        actionContext: this,
+                        controller: options.controller
+                    }),
+                    instance = options.command.instance,
+                    cache = options.adapter.req.globals['request-cache'];
 
-            // Save the references in either byBase or byType
-            if (instance.base) {
-                cache.byBase[instance.base] = newExpandedResource;
-            } else if (instance.type) {
-                cache.byType[instance.type] = newExpandedResource;
+                // Save the references in either byBase or byType
+                if (instance.base) {
+                    cache.byBase[instance.base] = newExpandedResource;
+                } else if (instance.type) {
+                    cache.byType[instance.type] = newExpandedResource;
+                }
             }
 
             // Execute the original constructor: addons + controller call
