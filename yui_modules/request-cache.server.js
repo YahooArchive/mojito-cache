@@ -25,6 +25,7 @@ YUI.add('request-cache', function (Y, NAME) {
     //-- RequestCacheActionContext --------------------------------------------
 
     function RequestCacheActionContext(options) {
+        this.controller = options.controller;
         RequestCacheActionContext.superclass.constructor.call(this, options);
     }
 
@@ -45,7 +46,7 @@ YUI.add('request-cache', function (Y, NAME) {
                 availableResourceList,
                 req = this._adapter.req,
                 instance = this.instance,
-                controller = instance.controller,
+                controller = this.controller,
                 resource = new ExpandedResource({
                     actionContext: this,
                     controller: controller
