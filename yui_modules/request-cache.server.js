@@ -30,6 +30,10 @@ YUI.add('request-cache', function (Y, NAME) {
 
     Y.extend(RequestCacheActionContext, Y.mojito.ActionContext, {
 
+        // This function is invoked from ac.done() and ac.error() (see below)
+        // and releases (i.e. puts back into the list of available resources)
+        // the resources (controller, action context) it was using. This is the
+        // reverse operation that was done in our custom dispatcher function.
         _releaseCachedResources: function () {
 
             if (!enabled) {
@@ -115,9 +119,9 @@ YUI.add('request-cache', function (Y, NAME) {
             staticAppConfig = adapter.page.staticAppConfig;
             config = staticAppConfig['request-cache'] || {};
 
-            // The cache is enabled if you don't set the "enabled"
-            // property in the cache configuration, or if you set
-            // that property to a value that evaluates to "true".
+            // The cache is enabled if you don't set the "enabled" property in
+            // the cache configuration, or if you set that property to a value
+            // that evaluates to "true".
             if (config.hasOwnProperty('enabled')) {
                 enabled = !!config.enabled;
             }
@@ -127,8 +131,11 @@ YUI.add('request-cache', function (Y, NAME) {
 
         if (enabled) {
 
-            // Build the cache if it doesn't exist.
-            adapter.req.globals = adapter.req.globals || {};
+            // Build the cache if it doesn't exist...
+
+            if (!adapter.req.globals) {
+                adapter.req.globals = {};
+            }
 
             if (!adapter.req.globals['request-cache']) {
                 adapter.req.globals['request-cache'] = {
@@ -137,18 +144,22 @@ YUI.add('request-cache', function (Y, NAME) {
                 };
             }
 
-            // Retrieve the cache and try to get a corresponding cached resource.
             cache = adapter.req.globals['request-cache'];
 
+            // See if there is an available cached resource that matches our instance.
             availableResourceList = (freshInstance.base && cache.byBase[freshInstance.base]) ||
                 (freshInstance.type && cache.byType[freshInstance.type]);
 
             if (availableResourceList && availableResourceList.length > 0) {
+                // Use the available cached resource by removing it from the
+                // list of available resources. This guarantees that mojits
+                // which controller may execute asynchronously do not share
+                // the same resources!
                 availableResource = availableResourceList.pop();
             }
         } else {
 
-            Y.log('mojito-cache is disabled', 'info', NAME);
+            Y.log('mojito-cache is disabled', 'debug', NAME);
         }
 
         // If there is a cached resource, dispatch with that.
