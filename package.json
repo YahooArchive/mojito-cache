@@ -2,7 +2,6 @@
     "name": "mojito-cache",
     "version": "0.1.2",
     "description": "A set of libraries for various caching strategies in mojito.",
-    "main": " ",
     "scripts": {
         "pretest": "mojito jslint app",
         "test": "istanbul cover --yui=true --dir=artifacts/test/coverage ./node_modules/.bin/mojito -- test app .",
@@ -18,6 +17,10 @@
         "mojito"
     ],
     "author": "arnoux@yahoo-inc.com",
+    "contributors": [
+        "Jacques Arnoux <arnoux@yahoo-inc.com>",
+        "Julien Lecomte <jlecomte@yahoo-inc.com>"
+    ],
     "license": "BSD",
     "engines": {
         "node": "> 0.10",

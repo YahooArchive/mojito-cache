@@ -3,213 +3,253 @@
  * Copyrights licensed under the New BSD License.
  * See the accompanying LICENSE file for terms.
  */
-/*jslint nomen: true, indent: 4, plusplus: true*/
+
+/*jslint node: true, nomen: true, indent: 4, plusplus: true */
 /*global YUI, YUITest */
 
 YUI.add('request-cache', function (Y, NAME) {
     'use strict';
 
     var staticAppConfig,
-        refreshedAddons,
+        refreshAddons,
         enabled = true,
+        originalDispatchFn = Y.mojito.Dispatcher.dispatch;
 
-        originalDispatcher     = Y.mojito.Dispatcher,
-        OriginalActionContext  = Y.mojito.ActionContext,
+    //-- ExpandedResource -----------------------------------------------------
 
-        RequestCacheDispatcher = function () {
+    function ExpandedResource(options) {
+        this.actionContext = options.actionContext;
+        this.controller = options.controller;
+    }
 
-            /**
-             * Here we will mimic what the ActionContext constructor does,
-             * except we try to skip expanding the instance and repopulating the
-             * addons if we don't have to. We build a cache in the request
-             * object, which means this is useful for apps that have several
-             * times the same type of mojit on the same page. The cache does not
-             * survive the current request.
-             * @see: ActionContext constructor
-             */
-            this.dispatch = function (command, adapter) {
+    //-- RequestCacheActionContext --------------------------------------------
 
-                var config,
-                    cache,
-                    cachedResource,
-                    newCommand,
-                    action,
-                    error,
-                    i,
-                    addonInstance,
-                    AddonConstuct,
-                    freshInstance = command.instance;
+    function RequestCacheActionContext(options) {
+        RequestCacheActionContext.superclass.constructor.call(this, options);
+    }
 
-                if (!staticAppConfig) {
+    Y.extend(RequestCacheActionContext, Y.mojito.ActionContext, {
 
-                    // Retrieve the cache configuration on the first dispatch.
+        // This function is invoked from ac.done() and ac.error() (see below)
+        // and releases (i.e. puts back into the list of available resources)
+        // the resources (controller, action context) it was using. This is the
+        // reverse operation that was done in our custom dispatcher function.
+        _releaseCachedResources: function () {
 
-                    staticAppConfig = adapter.page.staticAppConfig;
-                    config = staticAppConfig['request-cache'] || {};
+            if (!enabled) {
+                return;
+            }
 
-                    // The cache is enabled if you don't set the "enabled"
-                    // property in the cache configuration, or if you set
-                    // that property to a value that evaluates to "true".
-                    if (config.hasOwnProperty('enabled')) {
-                        enabled = !!config.enabled;
-                    }
+            var cache,
+                cacheKey,
+                availableResourceList,
+                req = this._adapter.req,
+                instance = this.instance,
+                controller = instance.controller,
+                resource = new ExpandedResource({
+                    actionContext: this,
+                    controller: controller
+                });
 
-                    refreshedAddons = config.refreshAddons || [];
-                }
+            if (!req.globals) {
+                req.globals = {};
+            }
 
-                if (enabled) {
+            if (!req.globals['request-cache']) {
+                req.globals['request-cache'] = {
+                    byBase: {},
+                    byType: {}
+                };
+            }
 
-                    // Build the cache if it doesn't exist.
-                    adapter.req.globals = adapter.req.globals || {};
+            cache = req.globals['request-cache'];
 
-                    if (!adapter.req.globals['request-cache']) {
-                        adapter.req.globals['request-cache'] = {
-                            byBase: {},
-                            byType: {}
-                        };
-                    }
+            if (instance.base && !cache.byBase[instance.base]) {
+                cache.byBase[instance.base] = [];
+            } else if (instance.type && !cache.byType[instance.type]) {
+                cache.byType[instance.type] = [];
+            }
 
-                    // Retrieve the cache and try to get a corresponding cached resource.
-                    cache = adapter.req.globals['request-cache'];
-                    cachedResource = (freshInstance.base && cache.byBase[freshInstance.base]) ||
-                        (freshInstance.type && cache.byType[freshInstance.type]);
-                }
+            if (instance.base) {
+                availableResourceList = cache.byBase[instance.base];
+                cacheKey = 'base=' + instance.base;
+            } else if (instance.type) {
+                availableResourceList = cache.byType[instance.type];
+                cacheKey = 'type=' + instance.type;
+            }
 
-                // If there is a cached resource, dispatch with that.
-                if (cachedResource) {
+            Y.log('Releasing instance for mojit [' + cacheKey + ']', 'debug', NAME);
 
-                    // We reference this here just to easily refer
-                    // to cachedResource.actionContext.command
-                    newCommand = cachedResource.actionContext.command;
-
-                    // We want the new params and action
-                    newCommand.params = command.params;
-                    newCommand.action = command.instance.action || newCommand.action;
-
-                    // This is specific to mojito-pipeline
-                    newCommand.task = command.task;
-
-                    // Reap anything else that might have gone into the instance config.
-                    Y.mix(newCommand.instance.config, command.instance.config, true);
-
-                    // Instantiate again the addons that need to be refreshed if any
-                    for (i = 0; i < refreshedAddons.length; i++) {
-                        AddonConstuct = Y.mojito.addons.ac[refreshedAddons[i]];
-
-                        if (AddonConstuct) {
-                            addonInstance = new AddonConstuct(newCommand, adapter, cachedResource.actionContext);
-
-                            if (addonInstance.namespace && cachedResource.actionContext[addonInstance.namespace]) {
-                                cachedResource.actionContext[addonInstance.namespace] = addonInstance;
-                            }
-                        }
-                    }
-
-                    // The adapter and its callbacks need to be refreshed
-                    cachedResource.actionContext._adapter = adapter;
-
-                    // Handle the __call case
-                    if (Y.Lang.isFunction(cachedResource.controller[newCommand.action])) {
-
-                        action = newCommand.action;
-                    } else if (Y.Lang.isFunction(cachedResource.controller.__call)) {
-
-                        action = '__call';
-                    } else {
-
-                        error = new Error("No method '" + newCommand.action + "' on controller type '" + newCommand.instance.type + "'");
-                        error.code = 404;
-                        throw error;
-                    }
-
-                    // Handle controller timeout
-                    if (staticAppConfig.actionTimeout) {
-
-                        // This will be cleared in ActionContext.done if it happens in time
-                        cachedResource.actionContext._timer = setTimeout(function () {
-                            var err,
-                                msg = 'Killing potential zombie context for Mojit type: ' +
-                                    command.instance.type +
-                                    ', controller: ' + cachedResource.controller +
-                                    ', action: ' + action;
-
-                            // Clear the timer reference so our invocation of error()
-                            // doesn't try to clear it.
-                            cachedResource.actionContext._timer = null;
-
-                            // Create an HTTP Timeout error with controller/action info.
-                            err = new Error(msg);
-                            err.code = 408;
-
-                            cachedResource.actionContext.error(err);
-
-                            // Unlike what we do in the normal AC, this is not done because
-                            // we reuse that action context!
-                            // That might screw up some rendering though...
-                            // cachedResource.actionContext.done = function() {
-                            //     Y.log('ac.done() called after timeout. results lost', 'warn', NAME);
-                            // };
-
-                        }, staticAppConfig.actionTimeout);
-                    }
-
-                    cachedResource.controller[action](cachedResource.actionContext);
-
-                } else {
-                    // No cache, expand the command.instance and create a new AC
-                    // with our custom RequestCacheActionContext constructor
-                    // which then instanciates all the addons and calls the controller
-                    // This is normal mojito workflow, except our custom constructor
-                    // populates the cache so next time we can find it and avoid
-                    // doing this.
-                    originalDispatcher.dispatch.apply(this, arguments);
-                }
-            };
+            availableResourceList.push(resource);
         },
 
-        ExpandedResource = function (options) {
-            this.actionContext = options.actionContext;
-            this.controller    = options.controller;
+        done: function () {
+            RequestCacheActionContext.superclass.done.apply(this, arguments);
+            this._releaseCachedResources();
         },
 
-        /**
-         * A superclass for mojito's ActionContext
-         * @param {Object} options.controller
-         * @param {Object} options.command
-         * @param {Object} options.store
-         * @param {Object} options.adapter
-         * @param {Object} options.dispatcher
-         */
-        RequestCacheActionContext = function (options) {
-            if (enabled) {
-                var newExpandedResource = new ExpandedResource({
-                        actionContext: this,
-                        controller: options.controller
-                    }),
-                    instance = options.command.instance,
-                    cache = options.adapter.req.globals['request-cache'];
+        error: function () {
+            RequestCacheActionContext.superclass.error.apply(this, arguments);
+            this._releaseCachedResources();
+        }
+    });
 
-                // Save the references in either byBase or byType
-                if (instance.base) {
-                    cache.byBase[instance.base] = newExpandedResource;
-                } else if (instance.type) {
-                    cache.byType[instance.type] = newExpandedResource;
+    Y.mojito.ActionContext = RequestCacheActionContext;
+
+    //-- Y.mojito.Dispatcher.dispatch -----------------------------------------
+
+    Y.mojito.Dispatcher.dispatch = function (command, adapter) {
+
+        var config,
+            cache,
+            availableResourceList,
+            availableResource,
+            newCommand,
+            action,
+            error,
+            addonInstance,
+            AddonConstuctor,
+            freshInstance = command.instance,
+            i;
+
+        if (!staticAppConfig) {
+
+            // Retrieve the cache configuration on the first dispatch.
+
+            staticAppConfig = adapter.page.staticAppConfig;
+            config = staticAppConfig['request-cache'] || {};
+
+            // The cache is enabled if you don't set the "enabled" property in
+            // the cache configuration, or if you set that property to a value
+            // that evaluates to "true".
+            if (config.hasOwnProperty('enabled')) {
+                enabled = !!config.enabled;
+            }
+
+            refreshAddons = config.refreshAddons || [];
+        }
+
+        if (enabled) {
+
+            // Build the cache if it doesn't exist...
+
+            if (!adapter.req.globals) {
+                adapter.req.globals = {};
+            }
+
+            if (!adapter.req.globals['request-cache']) {
+                adapter.req.globals['request-cache'] = {
+                    byBase: {},
+                    byType: {}
+                };
+            }
+
+            cache = adapter.req.globals['request-cache'];
+
+            // See if there is an available cached resource that matches our instance.
+            availableResourceList = (freshInstance.base && cache.byBase[freshInstance.base]) ||
+                (freshInstance.type && cache.byType[freshInstance.type]);
+
+            if (availableResourceList && availableResourceList.length > 0) {
+                // Use the available cached resource by removing it from the
+                // list of available resources. This guarantees that mojits
+                // which controller may execute asynchronously do not share
+                // the same resources!
+                availableResource = availableResourceList.pop();
+            }
+        } else {
+
+            Y.log('mojito-cache is disabled', 'debug', NAME);
+        }
+
+        // If there is a cached resource, dispatch with that.
+        if (availableResource) {
+
+            Y.log('Using cached instance for mojit [' +
+                    ((freshInstance.base && cache.byBase[freshInstance.base]) ? 'base=' + freshInstance.base :
+                        (freshInstance.type && cache.byType[freshInstance.type]) ? 'type=' + freshInstance.type : 'N/A') +
+                    ']', 'debug', NAME);
+
+            // We reference this here just to easily refer
+            // to availableResource.actionContext.command
+            newCommand = availableResource.actionContext.command;
+
+            // We want the new params and action
+            newCommand.params = command.params;
+            newCommand.action = command.instance.action || newCommand.action;
+
+            // This is specific to mojito-pipeline
+            newCommand.task = command.task;
+
+            // Reap anything else that might have gone into the instance config.
+            Y.mix(newCommand.instance.config, command.instance.config, true);
+
+            // Instantiate again the addons that need to be refreshed if any
+            for (i = 0; i < refreshAddons.length; i++) {
+                AddonConstuctor = Y.mojito.addons.ac[refreshAddons[i]];
+                if (AddonConstuctor) {
+                    addonInstance = new AddonConstuctor(newCommand, adapter, availableResource.actionContext);
+                    if (addonInstance.namespace && availableResource.actionContext[addonInstance.namespace]) {
+                        availableResource.actionContext[addonInstance.namespace] = addonInstance;
+                    }
                 }
             }
 
-            // Execute the original constructor: addons + controller call
-            OriginalActionContext.apply(this, arguments);
-        };
+            // The adapter and its callbacks need to be refreshed
+            availableResource.actionContext._adapter = adapter;
 
-    RequestCacheDispatcher.prototype    = originalDispatcher;
-    RequestCacheActionContext.prototype = OriginalActionContext.prototype;
+            // Handle the __call case
+            if (Y.Lang.isFunction(availableResource.controller[newCommand.action])) {
+                action = newCommand.action;
+            } else if (Y.Lang.isFunction(availableResource.controller.__call)) {
+                action = '__call';
+            } else {
+                error = new Error('No method "' + newCommand.action + '" on controller type "' + newCommand.instance.type + '"');
+                error.code = 404;
+                throw error;
+            }
 
-    /**
-     * A "superinstance" of mojito's Dispatcher
-     * @type {Object}
-     */
-    Y.mojito.Dispatcher    = new RequestCacheDispatcher();
-    Y.mojito.ActionContext = RequestCacheActionContext;
+            // Handle controller timeout
+            if (staticAppConfig.actionTimeout) {
+
+                // This will be cleared in ActionContext.done if it happens in time
+                availableResource.actionContext._timer = setTimeout(function () {
+                    var err,
+                        msg = 'Killing potential zombie context for Mojit type: ' +
+                            command.instance.type +
+                            ', controller: ' + availableResource.controller +
+                            ', action: ' + action;
+
+                    // Clear the timer reference so our invocation of error()
+                    // doesn't try to clear it.
+                    availableResource.actionContext._timer = null;
+
+                    // Create an HTTP Timeout error with controller/action info.
+                    err = new Error(msg);
+                    err.code = 408;
+
+                    availableResource.actionContext.error(err);
+
+                }, staticAppConfig.actionTimeout);
+            }
+
+            availableResource.controller[action](availableResource.actionContext);
+
+        } else {
+            Y.log('Creating a new instance for mojit [' +
+                    (freshInstance.base ? 'base=' + freshInstance.base :
+                        freshInstance.type ? 'type=' + freshInstance.type : 'N/A') +
+                    ']', 'debug', NAME);
+
+            // No cache, expand the command.instance and create a new AC
+            // with our custom RequestCacheActionContext constructor
+            // which then instanciates all the addons and calls the controller
+            // This is normal mojito workflow, except our custom constructor
+            // populates the cache so next time we can find it and avoid
+            // doing this.
+            originalDispatchFn.apply(this, arguments);
+        }
+    };
 
 }, '0.1.0', {
     requires: [
