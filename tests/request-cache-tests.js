@@ -1,11 +1,10 @@
-/*jslint nomen: true, indent: 4, plusplus: true, stupid: true */
+/*jslint nomen: true, indent: 4 */
 /*global YUI, YUITest */
 
 YUI.add('request-cache-tests', function (Y, NAME) {
     'use strict';
 
     var A = YUITest.Assert,
-        Value = YUITest.Mock.Value,
         suite = new YUITest.TestSuite(NAME),
 
         BazAddon = function () {
@@ -50,7 +49,7 @@ YUI.add('request-cache-tests', function (Y, NAME) {
 
             this.cache = {
                 byBase: {
-                    'foo': {
+                    'foo': [{
                         actionContext: this.cachedAc,
                         controller: {
                             index: function () {
@@ -60,17 +59,17 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                                 self.__callIsUsed = true;
                             }
                         }
-                    }
+                    }]
                 },
                 byType: {
-                    'Bar': {
+                    'Bar': [{
                         actionContext: this.cachedAc,
                         controller: {
                             index: function () {
                                 self.typeCacheUsed = true;
                             }
                         }
-                    }
+                    }]
                 }
             };
 
@@ -80,21 +79,13 @@ YUI.add('request-cache-tests', function (Y, NAME) {
             };
         },
 
-        'Instanciating AC populates the cache correctly': function () {
-            var ac,
-                req = {
-                    globals: {
-                        "request-cache": {
-                            byBase: {},
-                            byType: {}
-                        }
-                    }
-                },
-                acArgs = {
+        'Calling ac.done() or ac.error() should populate the cache correctly': function () {
+            var req = {},
+
+                opts = {
                     command: {
                         instance: {
-                            base: 'foo',
-                            type: 'bar'
+                            base: 'foo'
                         }
                     },
                     adapter: {
@@ -103,32 +94,63 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                             staticAppConfig: this.CONFIG
                         }
                     }
-                };
+                },
 
-            // create the "original" ActioContext to do nothing
-            Y.mojito.ActionContext = function () {};
+                ac;
+
+            Y.mojito.ActionContext = function (opts) {
+                this._adapter = opts.adapter;
+                this.instance = opts.command.instance;
+            };
+
+            Y.mojito.ActionContext.prototype = {
+                done: function () {},
+                error: function () {}
+            };
+
             Y.use('request-cache');
 
-            ac = new Y.mojito.ActionContext(acArgs);
+            ac = new Y.mojito.ActionContext(opts);
+            ac.done();
 
-            // having both base and type results in being cached by base
-            A.isNotUndefined(req.globals['request-cache'].byBase.foo);
+            A.areSame(1, req.globals['request-cache'].byBase.foo.length);
             A.isUndefined(req.globals['request-cache'].byType.bar);
 
-            delete acArgs.command.instance.base;
+            delete req.globals;
+            delete opts.command.instance.base;
+            opts.command.instance.type = 'bar';
 
-            ac = new Y.mojito.ActionContext(acArgs);
+            ac = new Y.mojito.ActionContext(opts);
+            ac.done();
 
-            // having just type populates by type
-            A.isNotUndefined(req.globals['request-cache'].byType.bar);
+            A.isUndefined(req.globals['request-cache'].byBase.foo);
+            A.areSame(1, req.globals['request-cache'].byType.bar.length);
 
+            // Now, try ac.error()
+            delete req.globals;
+            ac = new Y.mojito.ActionContext(opts);
+            ac.error();
+
+            A.isUndefined(req.globals['request-cache'].byBase.foo);
+            A.areSame(1, req.globals['request-cache'].byType.bar.length);
         },
 
         'Dispatching with no cached version calls old dispatch': function () {
             var req = {},
+
+                command = {
+                    instance: {}
+                },
+
+                adapter = {
+                    req: req,
+                    page: {
+                        staticAppConfig: this.CONFIG
+                    }
+                },
+
                 originalDispatcherCalled = false;
 
-            // Design the "original" dispatcher so that it records if it's been called
             Y.mojito.Dispatcher.dispatch = function () {
                 originalDispatcherCalled = true;
             };
@@ -139,12 +161,7 @@ YUI.add('request-cache-tests', function (Y, NAME) {
             // This will override the "original" dispatcher
             Y.use('request-cache');
 
-            Y.mojito.Dispatcher.dispatch({ instance: {} }, {
-                req: req,
-                page: {
-                    staticAppConfig: this.CONFIG
-                }
-            });
+            Y.mojito.Dispatcher.dispatch(command, adapter);
 
             // The original method is called
             A.isTrue(originalDispatcherCalled);
@@ -273,6 +290,12 @@ YUI.add('request-cache-tests', function (Y, NAME) {
 
         'Correct Addons are refreshed': function () {
 
+            this.cache.byType.Bar[0].controller.index = function (ac) {
+                // Verify that only baz has been refreshed in the cache
+                A.isFalse(ac.baz.cached);
+                A.isTrue(ac.quux.cached);
+            };
+
             Y.mojito.Dispatcher.dispatch({
                 instance: {
                     type: 'Bar',
@@ -288,15 +311,12 @@ YUI.add('request-cache-tests', function (Y, NAME) {
                     staticAppConfig: this.CONFIG
                 }
             });
-
-            // Verify that only baz has been refreshed in the cache
-            A.isFalse(this.cache.byType.Bar.actionContext.baz.cached);
-            A.isTrue(this.cache.byType.Bar.actionContext.quux.cached);
         }
 
     }));
 
     YUITest.TestRunner.add(suite);
+
 }, '0.0.1', {
     requires: [
         'mojito-dispatcher',
