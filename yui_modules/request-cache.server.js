@@ -254,6 +254,7 @@ YUI.add('request-cache', function (Y, NAME) {
 
 }, '0.1.0', {
     requires: [
+        'oop',
         'mojito-dispatcher',
         'mojito-action-context'
     ]
