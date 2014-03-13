@@ -86,7 +86,7 @@ YUI.add('request-cache', function (Y, NAME) {
                 cacheKey = 'type=' + instance.type;
             }
 
-            Y.log('Releasing instance for mojit [' + cacheKey + ']', 'info', NAME);
+            Y.log('Releasing instance for mojit [' + cacheKey + ']', 'debug', NAME);
 
             availableResourceList.push(resource);
         },
@@ -176,7 +176,7 @@ YUI.add('request-cache', function (Y, NAME) {
             }
         } else {
 
-            Y.log('mojito-cache is disabled', 'info', NAME);
+            Y.log('mojito-cache is disabled', 'debug', NAME);
         }
 
         // If there is a cached resource, dispatch with that.
@@ -185,7 +185,7 @@ YUI.add('request-cache', function (Y, NAME) {
             Y.log('Using cached instance for mojit [' +
                     ((freshInstance.base && cache.byBase[freshInstance.base]) ? 'base=' + freshInstance.base :
                         (freshInstance.type && cache.byType[freshInstance.type]) ? 'type=' + freshInstance.type : 'N/A') +
-                    ']', 'info', NAME);
+                    ']', 'debug', NAME);
 
             // We reference this here just to easily refer
             // to availableResource.actionContext.command
@@ -256,7 +256,7 @@ YUI.add('request-cache', function (Y, NAME) {
             Y.log('Creating a new instance for mojit [' +
                     (freshInstance.base ? 'base=' + freshInstance.base :
                         freshInstance.type ? 'type=' + freshInstance.type : 'N/A') +
-                    ']', 'info', NAME);
+                    ']', 'debug', NAME);
 
             // No cache, expand the command.instance and create a new AC
             // with our custom RequestCacheActionContext constructor
