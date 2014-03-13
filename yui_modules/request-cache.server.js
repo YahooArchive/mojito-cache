@@ -13,7 +13,12 @@ YUI.add('request-cache', function (Y, NAME) {
     var staticAppConfig,
         refreshAddons,
         enabled = true,
-        originalDispatchFn = Y.mojito.Dispatcher.dispatch;
+
+        originalDispatchFn = Y.mojito.Dispatcher.dispatch,
+
+        OriginalActionContext = Y.mojito.ActionContext,
+        originalAcDoneFn = Y.mojito.ActionContext.prototype.done,
+        originalAcErrorFn = Y.mojito.ActionContext.prototype.error;
 
     //-- ExpandedResource -----------------------------------------------------
 
@@ -22,14 +27,16 @@ YUI.add('request-cache', function (Y, NAME) {
         this.controller = options.controller;
     }
 
-    //-- RequestCacheActionContext --------------------------------------------
+    //-- ActionContext --------------------------------------------------------
+    //
+    // Here, it is critical to modify the prototype of the original AC object
+    // because other files might have overridden it, and depending on the order
+    // YUI loads modules, simply replacing the AC object may cause things to
+    // break. See the following PR for a use case:
+    //
+    // https://github.com/yahoo/mojito-waterfall/pull/1
 
-    function RequestCacheActionContext(options) {
-        this.controller = options.controller;
-        RequestCacheActionContext.superclass.constructor.call(this, options);
-    }
-
-    Y.extend(RequestCacheActionContext, Y.mojito.ActionContext, {
+    Y.mix(Y.mojito.ActionContext.prototype, {
 
         // This function is invoked from ac.done() and ac.error() (see below)
         // and releases (i.e. puts back into the list of available resources)
@@ -85,17 +92,26 @@ YUI.add('request-cache', function (Y, NAME) {
         },
 
         done: function () {
-            RequestCacheActionContext.superclass.done.apply(this, arguments);
+            originalAcDoneFn.apply(this, arguments);
             this._releaseCachedResources();
         },
 
         error: function () {
-            RequestCacheActionContext.superclass.error.apply(this, arguments);
+            originalAcErrorFn.apply(this, arguments);
             this._releaseCachedResources();
         }
-    });
 
-    Y.mojito.ActionContext = RequestCacheActionContext;
+    }, true);
+
+    // Now, we also need to customize the constructor of the AC object,
+    // hence the following:
+
+    Y.mojito.ActionContext = function (options) {
+        this.controller = options.controller;
+        OriginalActionContext.call(this, options);
+    };
+
+    Y.mojito.ActionContext.prototype = OriginalActionContext.prototype;
 
     //-- Y.mojito.Dispatcher.dispatch -----------------------------------------
 
@@ -254,7 +270,6 @@ YUI.add('request-cache', function (Y, NAME) {
 
 }, '0.1.0', {
     requires: [
-        'oop',
         'mojito-dispatcher',
         'mojito-action-context'
     ]
