@@ -1,2 +1,2 @@
-artifacts/
-npm-debug.log
+.git*
+tests
